@@ -31,7 +31,7 @@ config = {
     "download_url": "https://github.com/retico-team/retico-googleasr",
     "python_requires": ">=3.6, <4",
     "version": retico_googleasr.__version__,
-    "install_requires": ["retico-core~=0.2", "google-cloud-speech~=2.2.1"],
+    "install_requires": ["retico-core~=0.2", "google-cloud-speech~=2.15"],
     "packages": find_packages(),
     "name": "retico-googleasr",
     "keywords": "retico, framework, incremental, dialogue, dialog, asr, speech",

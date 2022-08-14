@@ -1,3 +1,3 @@
 from retico_googleasr.googleasr import *
 
-__version__ = "0.1.2"
+from retico_googleasr.version import __version__

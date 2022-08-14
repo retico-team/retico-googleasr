@@ -13,7 +13,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
-import retico_googleasr
+exec(open("retico_googleasr/version.py").read())
 
 import pathlib
 
@@ -30,7 +30,7 @@ config = {
     "url": "https://github.com/retico-team/retico-googleasr",
     "download_url": "https://github.com/retico-team/retico-googleasr",
     "python_requires": ">=3.6, <4",
-    "version": retico_googleasr.__version__,
+    "version": __version__,
     "install_requires": ["retico-core~=0.2", "google-cloud-speech~=2.15"],
     "packages": find_packages(),
     "name": "retico-googleasr",

@@ -128,19 +128,31 @@ class GoogleASRModule(AbstractModule):
                 if s < self.threshold and c == 0.0 and not f:
                     continue
                 current_text = t
-                if self.current_ius:
-                    um, current_text = self.get_increment(current_text)
-                if current_text.strip() == "" and not f:
-                    continue
 
-                output_iu = self.create_iu(self.latest_input_iu)
+                um, new_tokens = self.get_increment(current_text)
+
+                if len(new_tokens) == 0:
+                    if not f:
+                        continue
+                    else:
+                        output_iu = self.create_iu(self.latest_input_iu)
+                        output_iu.set_asr_results(p, "", s, c, f)
+                        output_iu.committed = True
+                        self.current_ius = []
+                        um.add_iu(output_iu, UpdateType.ADD)
+
+                for i, token in enumerate(new_tokens):
+                    output_iu = self.create_iu(self.latest_input_iu)
+                    eou = f and i == len(new_tokens) - 1
+                    output_iu.set_asr_results(p, token, 0.0, 0.99, eou)
+                    if eou:
+                        output_iu.committed = True
+                        self.current_ius = []
+                    else:
+                        self.current_ius.append(output_iu)
+                    um.add_iu(output_iu, UpdateType.ADD)
+
                 self.latest_input_iu = None
-                output_iu.set_asr_results(p, current_text, s, c, f)
-                self.current_ius.append(output_iu)
-                if output_iu.final:
-                    self.current_ius = []
-                    output_iu.committed = True
-                um.add_iu(output_iu, UpdateType.ADD)
                 self.append(um)
 
     def get_increment(self, new_text):
@@ -148,14 +160,28 @@ class GoogleASRModule(AbstractModule):
         produced and returns only the increment from the last update. It revokes all
         previously produced IUs that do not match."""
         um = UpdateMessage()
-        for iu in self.current_ius:
-            if new_text.startswith(iu.text):
-                new_text = new_text[len(iu.text) :]
+        tokens = new_text.strip().split(" ")
+        if tokens == [""]:
+            return um, []
+
+        new_tokens = []
+        iu_idx = 0
+        token_idx = 0
+        while token_idx < len(tokens):
+            if iu_idx >= len(self.current_ius):
+                new_tokens.append(tokens[token_idx])
+                token_idx += 1
             else:
-                iu.revoked = True
-                um.add_iu(iu, UpdateType.REVOKE)
+                current_iu = self.current_ius[iu_idx]
+                iu_idx += 1
+                if tokens[token_idx] == current_iu.text:
+                    token_idx += 1
+                else:
+                    current_iu.revoked = True
+                    um.add_iu(current_iu, UpdateType.REVOKE)
         self.current_ius = [iu for iu in self.current_ius if not iu.revoked]
-        return um, new_text
+
+        return um, new_tokens
 
     def setup(self):
         self.client = gspeech.SpeechClient()

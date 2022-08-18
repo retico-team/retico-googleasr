@@ -38,25 +38,39 @@ from retico_core import *
 from retico_googleasr import *
 
 
+msg = []
+
+
 def callback(update_msg):
+    global msg
     for x, ut in update_msg:
-        print(f"{ut}: {x.text} ({x.stability}) - {x.final}")
+        if ut == UpdateType.ADD:
+            msg.append(x)
+        if ut == UpdateType.REVOKE:
+            msg.remove(x)
+    txt = ""
+    committed = False
+    for x in msg:
+        txt += x.text + " "
+        committed = committed or x.committed
+    print(" " * 80, end="\r")
+    print(f"{txt}", end="\r")
+    if committed:
+        msg = []
+        print("")
 
 
-m1 = audio.MicrophoneModule(5000)
+m1 = audio.MicrophoneModule()
 m2 = GoogleASRModule("en-US")  # en-US or de-DE or ....
 m3 = debug.CallbackModule(callback=callback)
 
 m1.subscribe(m2)
 m2.subscribe(m3)
 
-m1.run()
-m2.run()
-m3.run()
+network.run(m1)
 
+print("Running")
 input()
 
-m1.stop()
-m2.stop()
-m3.stop()
+network.stop(m1)
 ```

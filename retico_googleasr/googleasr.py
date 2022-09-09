@@ -4,13 +4,13 @@ A Module that offers different types of real time speech recognition.
 
 import queue
 import threading
-from retico_core import *
+import retico_core
 from retico_core.text import SpeechRecognitionIU
 from retico_core.audio import AudioIU
 from google.cloud import speech as gspeech
 
 
-class GoogleASRModule(AbstractModule):
+class GoogleASRModule(retico_core.AbstractModule):
     """A Module that recognizes speech by utilizing the Google Speech API."""
 
     def __init__(
@@ -58,7 +58,7 @@ class GoogleASRModule(AbstractModule):
 
     def process_update(self, update_message):
         for iu, ut in update_message:
-            if ut != UpdateType.ADD:
+            if ut != retico_core.UpdateType.ADD:
                 continue
             self.audio_buffer.put(iu.raw_audio)
             if not self.latest_input_iu:
@@ -124,12 +124,12 @@ class GoogleASRModule(AbstractModule):
         for response in self.responses:
             p, t, s, c, f = self._extract_results(response)
             if p:
-                um = UpdateMessage()
+                um = retico_core.UpdateMessage()
                 if s < self.threshold and c == 0.0 and not f:
                     continue
                 current_text = t
 
-                um, new_tokens = self.get_increment(current_text)
+                um, new_tokens = retico_core.text.get_text_increment(self, current_text)
 
                 if len(new_tokens) == 0:
                     if not f:
@@ -138,8 +138,8 @@ class GoogleASRModule(AbstractModule):
                         output_iu = self.create_iu(self.latest_input_iu)
                         output_iu.set_asr_results(p, "", s, c, f)
                         output_iu.committed = True
-                        self.current_ius = []
-                        um.add_iu(output_iu, UpdateType.ADD)
+                        self.current_output = []
+                        um.add_iu(output_iu, retico_core.UpdateType.ADD)
 
                 for i, token in enumerate(new_tokens):
                     output_iu = self.create_iu(self.latest_input_iu)
@@ -147,41 +147,13 @@ class GoogleASRModule(AbstractModule):
                     output_iu.set_asr_results(p, token, 0.0, 0.99, eou)
                     if eou:
                         output_iu.committed = True
-                        self.current_ius = []
+                        self.current_output = []
                     else:
-                        self.current_ius.append(output_iu)
-                    um.add_iu(output_iu, UpdateType.ADD)
+                        self.current_output.append(output_iu)
+                    um.add_iu(output_iu, retico_core.UpdateType.ADD)
 
                 self.latest_input_iu = None
                 self.append(um)
-
-    def get_increment(self, new_text):
-        """Compares the full text given by the asr with the IUs that are already
-        produced and returns only the increment from the last update. It revokes all
-        previously produced IUs that do not match."""
-        um = UpdateMessage()
-        tokens = new_text.strip().split(" ")
-        if tokens == [""]:
-            return um, []
-
-        new_tokens = []
-        iu_idx = 0
-        token_idx = 0
-        while token_idx < len(tokens):
-            if iu_idx >= len(self.current_ius):
-                new_tokens.append(tokens[token_idx])
-                token_idx += 1
-            else:
-                current_iu = self.current_ius[iu_idx]
-                iu_idx += 1
-                if tokens[token_idx] == current_iu.text:
-                    token_idx += 1
-                else:
-                    current_iu.revoked = True
-                    um.add_iu(current_iu, UpdateType.REVOKE)
-        self.current_ius = [iu for iu in self.current_ius if not iu.revoked]
-
-        return um, new_tokens
 
     def setup(self):
         self.client = gspeech.SpeechClient()

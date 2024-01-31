@@ -1,8 +1,7 @@
 """
 A Module that offers different types of real time speech recognition.
 """
-import sys, os
-sys.path.append(os.environ['RETICO'])
+# import sys, os
 
 import queue
 import threading

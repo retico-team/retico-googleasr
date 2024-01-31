@@ -20,6 +20,8 @@ To use the Automatic Speech Recognition module utilizing google cloud speech, yo
 
 For this, you may follow the first two steps of [this tutorial](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries#client-libraries-install-python).
 
+`pip install google-cloud-speech~=2.15`
+
 Important is, that you create your **Google Application Credentials json file** and save the path to that file into the global variable `GOOGLE_APPLICATION_CREDENTIALS` (look for the "*Before you begin*" section on the tutorial page).
 
 After that you can install the package with

@@ -47,7 +47,7 @@ MAP_ISO_TO_IETF = { # To be expanded at will
 }
 
 class GoogleASRModule(retico_core.AbstractModule):
-    """Incremental ASR via Google Speech-to-Text API."""
+    """A Module that recognizes speech by utilizing the Google Speech API."""
 
     def __init__(
         self,

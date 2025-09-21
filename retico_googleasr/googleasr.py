@@ -182,18 +182,18 @@ class GoogleASRModule(retico_core.AbstractModule):
                 um, new_tokens = retico_core.text.get_text_increment(self, current_text)
 
                 if len(new_tokens) == 0 and final:
-                    output_iu = self.create_iu(self.latest_input_iu)
-                    output_iu.set_asr_results(predictions, "", stability, confidence, final)
-                    output_iu.committed = True
+                    for iu in self.current_output:
+                        um.add_iu(iu, retico_core.UpdateType.COMMIT)
                     self.current_output = []
-                    um.add_iu(output_iu, retico_core.UpdateType.ADD)
 
                 for i, token in enumerate(new_tokens):
                     output_iu = self.create_iu(self.latest_input_iu)
                     eou = final and (i == len(new_tokens) - 1)
                     output_iu.set_asr_results(predictions, token, 0.0, 0.99, eou)
                     if eou:
-                        output_iu.committed = True
+                        for iu in self.current_output:
+                            um.add_iu(iu, retico_core.UpdateType.COMMIT)
+                        um.add_iu(output_iu, retico_core.UpdateType.COMMIT)
                         self.current_output = []
                     else:
                         self.current_output.append(output_iu)

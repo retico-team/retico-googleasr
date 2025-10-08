@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retico-googleasr"
+dynamic = ["version"]
+dependencies = [
+    "google-cloud-speech",
+]
+authors = [
+    {name = "Thilo Michael", email = "uhlomuhlo@gmail.com"},
+]
+description = "The GoogleASR incremental module for the retico framework."
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = [
+    "retico", 
+    "framework", 
+    "incremental", 
+    "dialogue", 
+    "dialog", 
+    "asr", 
+    "speech",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+]
+

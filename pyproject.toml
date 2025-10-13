@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "retico-googleasr"
 dynamic = ["version"]
 dependencies = [
+    "retico-core>=2.0.0",
     "google-cloud-speech",
 ]
 authors = [

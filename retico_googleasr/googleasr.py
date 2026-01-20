@@ -6,7 +6,10 @@ import threading
 import retico_core
 from retico_core.text import SpeechRecognitionIU
 from retico_core.audio import AudioIU
-from google.cloud import speech as gspeech
+import google.auth
+from google.cloud.speech_v2 import SpeechClient
+from google.cloud.speech_v2.types import cloud_speech as cloud_speech_types
+from google.api_core.client_options import ClientOptions
 
 # The Google ASR API uses IETF language tags when the language recognition module outputs them in ISO 639-1 format
 MAP_ISO_TO_IETF = { # To be expanded at will
@@ -51,15 +54,18 @@ class GoogleASRModule(retico_core.AbstractModule):
 
     def __init__(
         self,
-        language: str = "en-US",
+        language: str | list = "en-US",
         threshold: float = 0.8,
         nchunks: int = 20,
         rate: int = 44100,
+        audio_channels: int = 1,
+        model: str = "chirp_3",
+        region: str = "us",
         **kwargs
     ):
         super().__init__(**kwargs)
 
-        self.iso_language = "en"
+        # self.iso_language = "en"
         self.language = language
 
         self.nchunks = nchunks
@@ -77,6 +83,10 @@ class GoogleASRModule(retico_core.AbstractModule):
 
         self._recognition_thread = None
         self._is_running = False
+        _, self.project_id = google.auth.default()
+        self.audio_channels = audio_channels
+        self.model = model
+        self.region = region
         
     @staticmethod
     def name():
@@ -163,14 +173,25 @@ class GoogleASRModule(retico_core.AbstractModule):
                     break
 
             yield b"".join(data)
-
+            
+    def _requests(self, config_request, audio_requests):
+            yield config_request
+            yield from audio_requests
+            
     def _produce_predictions_loop(self):
-        requests = (
-            gspeech.StreamingRecognizeRequest(audio_content=content)
-            for content in self._generator()
+        
+        audio_requests = (
+            cloud_speech_types.StreamingRecognizeRequest(audio=content) for content in self._generator()
         )
+        
+        config_request = cloud_speech_types.StreamingRecognizeRequest(
+            recognizer=f"projects/{self.project_id}/locations/{self.region}/recognizers/_",
+            streaming_config=self.streaming_config,
+        )
+            
+        # transcribes audio into text
         self.responses = self.client.streaming_recognize(
-            self.streaming_config, requests
+            requests=self._requests(config_request, audio_requests)
         )
         try:
             for response in self.responses:
@@ -221,14 +242,24 @@ class GoogleASRModule(retico_core.AbstractModule):
         self._recognition_thread.start()
 
     def setup(self):
-        self.client = gspeech.SpeechClient()
-        config = gspeech.RecognitionConfig(
-            encoding=gspeech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=self.rate,
-            language_code=self.language,
+        client_options = ClientOptions(api_endpoint=f"{self.region}-speech.googleapis.com")
+        self.client = SpeechClient(client_options=client_options)
+        config = cloud_speech_types.RecognitionConfig(
+            explicit_decoding_config=cloud_speech_types.ExplicitDecodingConfig(
+                encoding=cloud_speech_types.ExplicitDecodingConfig.AudioEncoding.LINEAR16,
+                sample_rate_hertz=self.rate,
+                audio_channel_count=self.audio_channels,
+            ),
+            language_codes=[self.language] if isinstance(self.language, str) else self.language,
+            model=self.model,
         )
-        self.streaming_config = gspeech.StreamingRecognitionConfig(
-            config=config, interim_results=True
+        streaming_features = cloud_speech_types.StreamingRecognitionFeatures(
+            interim_results=True
+        )
+        
+        self.streaming_config = cloud_speech_types.StreamingRecognitionConfig(
+            config=config, 
+            streaming_features=streaming_features
         )
 
     def prepare_run(self):

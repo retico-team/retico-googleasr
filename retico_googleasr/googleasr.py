@@ -190,14 +190,14 @@ class GoogleASRModule(retico_core.AbstractModule):
                     output_iu = self.create_iu(self.latest_input_iu)
                     eou = final and (i == len(new_tokens) - 1)
                     output_iu.set_asr_results(predictions, token, 0.0, 0.99, eou)
+                    
+                    self.current_output.append(output_iu)
+                    um.add_iu(output_iu, retico_core.UpdateType.ADD)
+                    
                     if eou:
                         for iu in self.current_output:
                             um.add_iu(iu, retico_core.UpdateType.COMMIT)
-                        um.add_iu(output_iu, retico_core.UpdateType.COMMIT)
                         self.current_output = []
-                    else:
-                        self.current_output.append(output_iu)
-                    um.add_iu(output_iu, retico_core.UpdateType.ADD)
 
                 self.latest_input_iu = None
                 self.append(um)

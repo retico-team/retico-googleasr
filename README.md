@@ -14,30 +14,29 @@ UpdateType.REVOKE:  isn't a sentence   (0.8999999761581421) - False
 UpdateType.ADD:     is a test sentence (0.0)                - True
 ```
 
+Google Speech-To-Text also provides different transcription models for speech recognition that can be found [here](https://docs.cloud.google.com/speech-to-text/docs/transcription-model).
+
 ## Installing
 
 To use the Automatic Speech Recognition module utilizing google cloud speech, you need to install the third-party package first.
 
 For this, you may follow the first two steps of [this tutorial](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries#client-libraries-install-python).
 
-`pip install google-cloud-speech~=2.15`
-
 Important is, that you create your **Google Application Credentials json file** and save the path to that file into the global variable `GOOGLE_APPLICATION_CREDENTIALS` (look for the "*Before you begin*" section on the tutorial page).
 
 After that you can install the package with
 
 ```bash
-$ pip install retico-googleasr
+$ pip install git+https://github.com/retico-team/retico-googleasr
 ```
 
-## Documentation
-
-Sadly, there is no proper documentation for retico-googleasr right now, but you can 
-start using the GoogleASRModule like this:
+## GoogleASR Example
 
 ```python
-from retico_core import *
-from retico_googleasr import *
+from retico_core.audio import MicrophoneModule
+from retico_core.debug import CallbackModule
+from retico_core.abstract import UpdateType
+from retico_googleasr import GoogleASRModule
 
 
 msg = []
@@ -62,17 +61,21 @@ def callback(update_msg):
         print("")
 
 
-m1 = audio.MicrophoneModule()
-m2 = GoogleASRModule("en-US")  # en-US or de-DE or ....
-m3 = debug.CallbackModule(callback=callback)
+mic = MicrophoneModule()
+asr = GoogleASRModule(language="en-US", rate=16_000, model="chirp_3")  # en-US or de-DE or ....
+callback = CallbackModule(callback=callback)
 
-m1.subscribe(m2)
-m2.subscribe(m3)
+mic.subscribe(asr)
+asr.subscribe(callback)
 
-network.run(m1)
+mic.run()
+asr.run()
+callback.run()
 
 print("Running")
 input()
 
-network.stop(m1)
+mic.stop()
+asr.stop()
+callback.stop()
 ```

@@ -3,6 +3,7 @@ A Module that offers different types of real time speech recognition.
 """
 import queue
 import threading
+import time
 import retico_core
 from retico_core.text import SpeechRecognitionIU
 from retico_core.audio import AudioIU
@@ -55,6 +56,7 @@ class GoogleASRModule(retico_core.AbstractModule):
         threshold: float = 0.8,
         nchunks: int = 20,
         rate: int = 44100,
+        reloop: bool = False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -77,6 +79,11 @@ class GoogleASRModule(retico_core.AbstractModule):
 
         self._recognition_thread = None
         self._is_running = False
+        
+        self.reloop = reloop
+        self.new_stream = False
+        self.start_time = None
+        self.stream_limit = 290  # Google ASR streaming limit is ~305 seconds, using 290 seconds just to be safe
         
     @staticmethod
     def name():
@@ -144,6 +151,12 @@ class GoogleASRModule(retico_core.AbstractModule):
 
     def _generator(self):
         while self._is_running:
+            # reloops only if we are about to approach the streaming limit, and if relooping is enabled
+            elapsed_time = time.time() - self.start_time
+            if self.reloop and elapsed_time > self.stream_limit:
+                self.new_stream = True
+                return
+            
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
@@ -165,6 +178,7 @@ class GoogleASRModule(retico_core.AbstractModule):
             yield b"".join(data)
 
     def _produce_predictions_loop(self):
+        self.start_time = time.time()
         requests = (
             gspeech.StreamingRecognizeRequest(audio_content=content)
             for content in self._generator()
@@ -204,6 +218,12 @@ class GoogleASRModule(retico_core.AbstractModule):
 
         except Exception as e:
             print(f"[GoogleASRModule] Exception in prediction loop: {e}")
+            
+        if self.reloop and self.new_stream and self._is_running:
+            print("[GoogleASRModule] Stream limit reached, restarting stream.")
+            self.new_stream = False
+            self._produce_predictions_loop()  # restart the loop for the new stream
+            
 
     def _restart_recognition(self):
         """Stop, reconfigure and restart the background recognition thread."""

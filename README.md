@@ -14,26 +14,33 @@ UpdateType.REVOKE:  isn't a sentence   (0.8999999761581421) - False
 UpdateType.ADD:     is a test sentence (0.0)                - True
 ```
 
-## Installing
+## Installation and Requirements
 
-To use the Automatic Speech Recognition module utilizing google cloud speech, you need to install the third-party package first.
+To use the Google ASR module you first need to install the retico-googleasr package:
+* Install retico-googleasr:
+```pip install retico-googleasr```
 
-For this, you may follow the first two steps of [this tutorial](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries#client-libraries-install-python).
+  or, for the latest development version from GitHub:
+```pip install git+https://github.com/retico-team/retico-googleasr.git```
 
-`pip install google-cloud-speech~=2.15`
+### Google Cloud credentials
+The module uses the Google Cloud Speech-to-Text API, so you need a **Google Application Credentials JSON file**. Follow the "*Before you begin*" section of [this tutorial](https://cloud.google.com/speech-to-text/docs/quickstart-client-libraries#client-libraries-install-python) to create it, and save the path to that file in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
 
-Important is, that you create your **Google Application Credentials json file** and save the path to that file into the global variable `GOOGLE_APPLICATION_CREDENTIALS` (look for the "*Before you begin*" section on the tutorial page).
+## Modules
 
-After that you can install the package with
+### `GoogleASRModule`
+Subscribes to `AudioIU` and outputs `SpeechRecognitionIU`. The audio is streamed to Google Cloud ASR, and its changing predictions are turned into incremental ADD and REVOKE updates. Words are committed once Google marks the result as final.
 
-```bash
-$ pip install retico-googleasr
-```
+If an incoming IU has a `language` attribute (e.g. from [retico-language-detection](https://github.com/retico-team/retico-language-detection)), the module switches to that language automatically.
 
-## Documentation
+#### Arguments:
+* `language` (str): the language to recognize, as an IETF language tag, e.g. `"en-US"` or `"de-DE"`; defaults to `"en-US"`
+* `threshold` (float): the minimum stability of a non-final prediction for it to be published; defaults to `0.8`
+* `nchunks` (int): currently unused; defaults to `20`
+* `rate` (int): the sample rate of the incoming audio; defaults to `44100`
 
-Sadly, there is no proper documentation for retico-googleasr right now, but you can 
-start using the GoogleASRModule like this:
+### Example
+**Note:** The example uses `MicrophoneModule` and `CallbackModule` from `retico_core`.
 
 ```python
 from retico_core import *

@@ -30,3 +30,8 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 
+[project.urls]
+Repository = "https://github.com/retico-team/retico-googleasr"
+
+[tool.setuptools_scm]
+version_file = "retico_googleasr/version.py"
